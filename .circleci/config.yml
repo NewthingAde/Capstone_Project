@@ -98,7 +98,7 @@ jobs:
           name: Installing dependencies
           command: |
               echo
-            yum install jq -y
+              yum install jq -y
       - run:
           name: Get Service URL and curl
           command: |
