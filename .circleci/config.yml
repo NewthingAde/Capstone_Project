@@ -1,0 +1,184 @@
+version: 2.1
+
+orbs:
+  sam: circleci/aws-sam-serverless@3.1.0
+  
+
+commands:
+  destroy-cluster:
+    description: Destroy EKS Cluster.
+    steps:
+      - run:
+          name: Destroy environments
+          when: on_fail
+          command: |
+            eksctl delete cluster --name node-app
+  install-kubectl-and-eksctl:
+    description: install kubectl and eksctl
+    steps:
+      - run:
+          name: Installing kubectl and eksctl
+          command: |
+                  yum install tar gzip -y
+                  curl --silent --location -o /usr/local/bin/kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.2/2021-07-05/bin/linux/amd64/kubectl
+                  chmod +x /usr/local/bin/kubectl
+                  mkdir -p $HOME/bin && cp ./kubectl $HOME/bin/kubectl && export PATH=$PATH:$HOME/bin
+                  kubectl version --client
+          
+                  curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+                  mv /tmp/eksctl /usr/local/bin
+                  eksctl version
+  undo-rollout:
+    description: Undo a recent deployment
+    steps:
+      - run:
+          name: Destroy environments
+          when: on_fail
+          command: |
+            kubectl rollout undo deploy node-app-deployment -n node-namespace
+            kubectl delete -f version_2.yml
+jobs:
+  lint-app:
+    docker:
+      - image: circleci/node:13.8.0
+    steps:
+      - checkout
+      - run:
+          name: Dockerfiles lint
+          command: |
+            npm install
+            npm run lint
+  
+  build-and-push-node1:
+    machine: true
+    steps:
+      - checkout
+      - run:
+          name: Build docker container for V1
+          command: |
+            echo
+            curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+            sudo apt install nodejs
+            docker build -t  newthingade/capstone:v1 .
+            docker login -u newthingade -p $DOCKERPASS
+            docker push newthingade/capstone:v1
+  
+  create-eks-cluster-app:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - checkout
+      - install-kubectl-and-eksctl
+      - run:
+          name: Creating K8S cluster
+          command: |
+                  echo
+                  eksctl create cluster \
+                  --name node-app \
+                  --region us-east-1 \
+                  --with-oidc \
+                  --ssh-access \
+                  --ssh-public-key udacity
+                  kubectl get nodes -o wide
+                  kubectl create namespace node-namespace
+                  aws eks update-kubeconfig --name node-app --region us-east-1
+      - run:
+          name: Deploying node-appv1
+          command: |
+              kubectl apply -f version_1.yml
+      - destroy-cluster
+
+  smoke-test-v1:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - checkout
+      - install-kubectl-and-eksctl
+      - run:
+          name: Installing dependencies
+          command: |
+              echo
+            yum install jq -y
+      - run:
+          name: Get Service URL and curl
+          command: |
+            aws eks update-kubeconfig --name node-app --region us-east-1
+            URL=$(kubectl get svc node-service -n node-namespace -o json | jq -r .status.loadBalancer.ingress[0].hostname)
+            curl -s ${URL}:5000 > node-app.txt
+            cat node-app.txt
+            if grep -q -e "WELCOME!! This is App Version1" node-app.txt; then
+                echo "working working"
+                exit 0
+            else
+                echo "not working"
+                exit 1
+            fi
+      - destroy-cluster
+  
+  build-and-push-node2:
+    machine: true
+    steps:
+      - checkout
+      - run:
+          name: Build docker container for V2
+          command: |
+            curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+            sudo apt install nodejs
+            docker build -t newthingade/capstone:v2 .
+            docker login -u newthingade -p $DOCKERPASS
+            docker push newthingade/capstone:v2
+  rollout-deployment:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - checkout
+      - install-kubectl-and-eksctl
+      - run:
+          name: Deploying node-appv1
+          command: |
+            aws eks update-kubeconfig --name node-app --region us-east-1
+            kubectl apply -f version_2.yml
+            kubectl rollout status deployment/node-app-deployment -n node-namespace
+            kubectl -n node-namespace get pods,rs,deploy,svc -o wide --show-labels
+  smoke-test-v2:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - checkout
+      - install-kubectl-and-eksctl
+      - run:
+          name: Installing dependencies
+          command: |
+            yum install jq -y
+      - run:
+          name: Get Service URL and curl
+          command: |
+            aws eks update-kubeconfig --name node-app --region us-east-1
+            URL=$(kubectl get svc node-service -n node-namespace -o json | jq -r .status.loadBalancer.ingress[0].hostname)
+            curl -s ${URL}:5000 > node-app.txt
+            cat node-app.txt
+            if grep -q -e "WELCOME!! This is App Version 2" node-app.txt; then
+                echo "working working"
+                exit 0
+            else
+                echo "not working"
+                exit 1
+            fi
+      - undo-rollout
+
+workflows:
+  the_jobs:
+    jobs:
+      - lint-app
+      - build-and-push-node1:
+          requires: [lint-app]
+      - create-eks-cluster-app:
+         requires: [build-and-push-node1]
+      - smoke-test-v1:
+          requires: [build-and-push-node1, create-eks-cluster-app]
+      - build-and-push-node2:
+          requires: [smoke-test-v1]
+      - rollout-deployment:
+          requires: [build-and-push-node2]
+      - smoke-test-v2:
+          requires: [rollout-deployment]

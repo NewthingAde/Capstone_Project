@@ -27,7 +27,7 @@ spec:
                 - arm64
       containers:
       - name: node-app
-        image: eebru/capstone:v2
+        image: newthingade/capstone:v2
         ports:
         - name: tcp
           containerPort: 5000
