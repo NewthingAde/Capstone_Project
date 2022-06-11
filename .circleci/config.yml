@@ -75,10 +75,14 @@ jobs:
                   echo
                   eksctl create cluster \
                   --name node-app \
-                  --region us-east-1 \
-                  --with-oidc \
-                  --ssh-access \
-                  --ssh-public-key udacity
+                  --version 1.14 \
+                  --nodegroup-name standard-workers \
+                  --node-type t3.medium \
+                  --nodes 3 \
+                  --nodes-min 1 \
+                  --nodes-max 4 \
+                  --node-ami auto \
+                  --profile default
                   kubectl get nodes -o wide
                   kubectl create namespace node-namespace
                   aws eks update-kubeconfig --name node-app --region us-east-1
