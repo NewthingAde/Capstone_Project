@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-app-deployment
+  namespace: node-namespace
+  labels:
+    app: node-label
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: node-label
+  template:
+    metadata:
+      labels:
+        app: node-label
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - amd64
+                - arm64
+      containers:
+      - name: node-app
+        image: eebru/capstone:v2
+        ports:
+        - name: tcp
+          containerPort: 5000
+        imagePullPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-service
+  namespace: node-namespace
+  labels:
+    app: node-label
+spec:
+  selector:
+    app: node-label
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
