@@ -47,7 +47,7 @@ jobs:
           name: Dockerfiles lint
           command: |
             npm install
-            eslint --init
+            npm run lint
   
   build-and-push-node1:
     machine: true
