@@ -76,6 +76,7 @@ jobs:
                   eksctl create cluster \
                   --name node-app \
                   --version 1.14 \
+                  --managed=false
                   --nodegroup-name standard-workers \
                   --node-type t3.medium \
                   --nodes 3 \
