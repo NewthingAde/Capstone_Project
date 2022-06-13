@@ -57,7 +57,7 @@ jobs:
           name: Build docker container for V1
           command: |
             echo
-            # curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+            #curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
             sudo apt install nodejs
             docker build -t  newthingade/capstone:v1 .
             docker login -u newthingade -p $DOCKERPASS
@@ -75,15 +75,10 @@ jobs:
                   echo
                   eksctl create cluster \
                   --name node-app \
-                  --version 1.14 \
-                  --managed=false
-                  --nodegroup-name standard-workers \
-                  --node-type t3.medium \
-                  --nodes 3 \
-                  --nodes-min 1 \
-                  --nodes-max 4 \
-                  --node-ami auto \
-                  --profile default
+                  --region us-east-1 \
+                  --with-oidc \
+                  --ssh-access \
+                  --ssh-public-key udacity
                   kubectl get nodes -o wide
                   kubectl create namespace node-namespace
                   aws eks update-kubeconfig --name node-app --region us-east-1
