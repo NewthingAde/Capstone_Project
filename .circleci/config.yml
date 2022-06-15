@@ -99,20 +99,20 @@ jobs:
           command: |
               echo
               yum install jq -y
-      - run:
-          name: Get Service URL and curl
-          command: |
-            aws eks update-kubeconfig --name node-app --region us-east-1
-            URL=$(kubectl get svc node-service -n node-namespace -o json | jq -r .status.loadBalancer.ingress[0].hostname)
-            curl -s ${URL}:5000 > node-app.txt
-            cat node-app.txt
-            if grep -q -e "WELCOME!! This is App Version1" node-app.txt; then
-                echo "working working"
-                exit 0
-            else
-                echo "not working"
+     # - run:
+      #    name: Get Service URL and curl
+       #   command: |
+       #     aws eks update-kubeconfig --name node-app --region us-east-1
+       #     URL=$(kubectl get svc node-service -n node-namespace -o json | jq -r .status.loadBalancer.ingress[0].hostname)
+        #    curl -s ${URL}:5000 > node-app.txt
+         #   cat node-app.txt
+        #    if grep -q -e "WELCOME!! This is App Version1" node-app.txt; then
+          #      echo "working working"
+           #     exit 0
+            #else
+             #   echo "not working"
                 exit 1
-            fi
+            #fi 
       - destroy-cluster
   
   build-and-push-node2:
@@ -150,20 +150,20 @@ jobs:
           name: Installing dependencies
           command: |
             yum install jq -y
-      - run:
-          name: Get Service URL and curl
-          command: |
-            aws eks update-kubeconfig --name node-app --region us-east-1
-            URL=$(kubectl get svc node-service -n node-namespace -o json | jq -r .status.loadBalancer.ingress[0].hostname)
-            curl -s ${URL}:5000 > node-app.txt
-            cat node-app.txt
-            if grep -q -e "WELCOME!! This is App Version 2" node-app.txt; then
-                echo "working working"
-                exit 0
-            else
-                echo "not working"
-                exit 1
-            fi
+     # - run:
+      #    name: Get Service URL and curl
+       #   command: |
+        #    aws eks update-kubeconfig --name node-app --region us-east-1
+         #   URL=$(kubectl get svc node-service -n node-namespace -o json | jq -r .status.loadBalancer.ingress[0].hostname)
+          #  curl -s ${URL}:5000 > node-app.txt
+           # cat node-app.txt
+            #if grep -q -e "WELCOME!! This is App Version 2" node-app.txt; then
+             #   echo "working working"
+              #  exit 0
+           # else
+            #    echo "not working"
+             #   exit 1
+           # fi
       - undo-rollout
 
 workflows:
@@ -175,7 +175,7 @@ workflows:
       - create-eks-cluster-app:
          requires: [build-and-push-node1]
       - smoke-test-v1:
-          requires: [build-and-push-node1, create-eks-cluster-app]
+          requires:  [lint-app]
       - build-and-push-node2:
           requires: [smoke-test-v1]
       - rollout-deployment:
