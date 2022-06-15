@@ -12,7 +12,7 @@ commands:
           name: Destroy environments
           when: on_fail
           command: |
-            eksctl delete cluster --name node-app
+            eksctl delete cluster --name node-application
   install-kubectl-and-eksctl:
     description: install kubectl and eksctl
     steps:
@@ -35,7 +35,7 @@ commands:
           name: Destroy environments
           when: on_fail
           command: |
-            kubectl rollout undo deploy node-app-deployment -n node-namespace
+            kubectl rollout undo deploy node-application-deployment -n node-namespace
             kubectl delete -f version_2.yml
 jobs:
   lint-app:
@@ -77,18 +77,18 @@ jobs:
           command: |
                   echo
                   eksctl create cluster \
-                  --name node-app \
+                  --name node-application \
                   --region us-east-1 \
                   --with-oidc \
                   --ssh-access \
                   --ssh-public-key udacity
                   kubectl get nodes -o wide
                   kubectl create namespace node-namespace
-                  aws eks update-kubeconfig --name node-app --region us-east-1
+                  aws eks update-kubeconfig --name node-application --region us-east-1
       - run:
-          name: Deploying node-appv1
+          name: Deploying version_1
           command: |
-              kubectl apply -f node-appv1.yml
+              kubectl apply -f version_1.yml
       - destroy-cluster
 
   smoke-test-v1:
@@ -126,11 +126,11 @@ jobs:
       - checkout
       - install-kubectl-and-eksctl
       - run:
-          name: Deploying node-appv1
+          name: Deploying version_2
           command: |
-            aws eks update-kubeconfig --name node-app --region us-east-1
-            kubectl apply -f node-appv2.yml
-            kubectl rollout status deployment/node-app-deployment -n node-namespace
+            aws eks update-kubeconfig --name node-application --region us-east-1
+            kubectl apply -f version_2.yml
+            kubectl rollout status deployment/node-application-deployment -n node-namespace
             kubectl -n node-namespace get pods,rs,deploy,svc -o wide --show-labels
   smoke-test-v2:
     docker:
@@ -159,4 +159,4 @@ workflows:
       - rollout-deployment:
           requires: [build-and-push-node2]
       - smoke-test-v2:
-          requires: [rollout-deployment]
+          requires: [lint-app]
