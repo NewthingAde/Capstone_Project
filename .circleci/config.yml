@@ -111,7 +111,7 @@ jobs:
            #     exit 0
             #else
              #   echo "not working"
-                exit 1
+               # exit 1
             #fi 
       - destroy-cluster
   
