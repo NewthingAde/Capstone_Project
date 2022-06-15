@@ -56,8 +56,8 @@ jobs:
       - run:
           name: Build docker container for V1
           command: |
-           
-          # curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+            echo
+            curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
             sudo apt install nodejs
             docker build -t  newthingade/capstone:v1 .
             docker login -u newthingade -p $DOCKERPASS
@@ -85,7 +85,7 @@ jobs:
       - run:
           name: Deploying node-appv1
           command: |
-              kubectl apply -f version_1.yml
+              kubectl apply -f node-appv1.yml
       - destroy-cluster
 
   smoke-test-v1:
@@ -99,20 +99,6 @@ jobs:
           command: |
               echo
               yum install jq -y
-     # - run:
-      #    name: Get Service URL and curl
-       #   command: |
-       #     aws eks update-kubeconfig --name node-app --region us-east-1
-       #     URL=$(kubectl get svc node-service -n node-namespace -o json | jq -r .status.loadBalancer.ingress[0].hostname)
-        #    curl -s ${URL}:5000 > node-app.txt
-         #   cat node-app.txt
-        #    if grep -q -e "WELCOME!! This is App Version1" node-app.txt; then
-          #      echo "working working"
-           #     exit 0
-            #else
-             #   echo "not working"
-               # exit 1
-            #fi 
       - destroy-cluster
   
   build-and-push-node2:
@@ -137,7 +123,7 @@ jobs:
           name: Deploying node-appv1
           command: |
             aws eks update-kubeconfig --name node-app --region us-east-1
-            kubectl apply -f version_2.yml
+            kubectl apply -f node-appv2.yml
             kubectl rollout status deployment/node-app-deployment -n node-namespace
             kubectl -n node-namespace get pods,rs,deploy,svc -o wide --show-labels
   smoke-test-v2:
@@ -150,20 +136,6 @@ jobs:
           name: Installing dependencies
           command: |
             yum install jq -y
-     # - run:
-      #    name: Get Service URL and curl
-       #   command: |
-        #    aws eks update-kubeconfig --name node-app --region us-east-1
-         #   URL=$(kubectl get svc node-service -n node-namespace -o json | jq -r .status.loadBalancer.ingress[0].hostname)
-          #  curl -s ${URL}:5000 > node-app.txt
-           # cat node-app.txt
-            #if grep -q -e "WELCOME!! This is App Version 2" node-app.txt; then
-             #   echo "working working"
-              #  exit 0
-           # else
-            #    echo "not working"
-             #   exit 1
-           # fi
       - undo-rollout
 
 workflows:
@@ -175,7 +147,7 @@ workflows:
       - create-eks-cluster-app:
          requires: [build-and-push-node1]
       - smoke-test-v1:
-          requires:  [lint-app]
+          requires: [lint-app]
       - build-and-push-node2:
           requires: [smoke-test-v1]
       - rollout-deployment:
