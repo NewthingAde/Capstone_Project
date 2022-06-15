@@ -56,7 +56,7 @@ jobs:
       - run:
           name: Build docker container for V1
           command: |
-            echo
+           
           # curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
             sudo apt install nodejs
             docker build -t  newthingade/capstone:v1 .
