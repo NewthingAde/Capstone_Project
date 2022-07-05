@@ -113,48 +113,4 @@ workflows:
     
     
     
-    
-    
-version: 2.1
-
-jobs:
-  lint-app:
-    docker:
-      - image: circleci/node:13.8.0
-    steps:
-      - checkout
-      - run:
-          name: Dockerfiles lint
-          command: |
-            npm install
-            npm run lint
   
-  build-and-push-node1:
-    machine: true
-    steps:
-      - checkout
-      - run:
-          name: Build docker container for V1
-          command: |
-            echo
-            sudo curl -LO https://nodejs.org/dist/v18.0.0/node-v18.0.0-linux-x64.tar.xz 
-            sudo tar -xvf node-v18.0.0-linux-x64.tar.xz 
-            sudo cp -r node-v18.0.0-linux-x64/{bin,include,lib,share} /usr/ 
-            node --version => v18.0.0
-            sudo apt install nodejs
-            docker build -t  newthingade/capstone:v1 .
-            docker login -u newthingade -p $DOCKERPASS
-            docker push newthingade/capstone:v1
-workflows:
-  the_jobs:
-    jobs:
-      - lint-app
-      - build-and-push-node1:
-          requires: [lint-app]
-    
-    
-    
-    
-    
-    
- 
